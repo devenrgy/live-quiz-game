@@ -21,6 +21,14 @@ export interface Game {
   players: Player[];
   currentQuestion: number;
   status: GameStatus;
+  questionStartedAt?: number;
+  answers: PlayerAnswer[];
+}
+
+export interface PlayerAnswer {
+  playerId: string;
+  answerIndex: number;
+  answeredAt: number;
 }
 
 export interface RegPayload {

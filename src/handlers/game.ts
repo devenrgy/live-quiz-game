@@ -102,6 +102,7 @@ function handleCreateGame(ws: WebSocket, data: unknown): void {
     players: [],
     currentQuestion: 0,
     status: 'waiting',
+    answers: [],
   };
 
   games.set(code, game);
