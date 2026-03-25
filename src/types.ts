@@ -23,6 +23,7 @@ export interface Game {
   status: GameStatus;
   questionStartedAt?: number;
   answers: PlayerAnswer[];
+  isResolving: boolean;
 }
 
 export interface PlayerAnswer {

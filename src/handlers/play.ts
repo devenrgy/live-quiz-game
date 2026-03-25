@@ -62,6 +62,7 @@ function handleStartGame(ws: WebSocket, data: unknown): void {
   game.status = 'in_progress';
   game.currentQuestion = 0;
   game.answers = [];
+  game.isResolving = false;
 
   sendQuestion(game);
 }
@@ -172,6 +173,12 @@ export function sendQuestion(game: Game): void {
 }
 
 export function resolveQuestion(game: Game): void {
+  if (game.isResolving) {
+    return;
+  }
+
+  game.isResolving = true;
+
   const timer = gameTimers.get(game.id);
   if (timer !== undefined) {
     clearTimeout(timer);
@@ -229,6 +236,7 @@ export function resolveQuestion(game: Game): void {
 
   game.answers = [];
   game.currentQuestion += 1;
+  game.isResolving = false;
 
   if (game.currentQuestion < game.questions.length) {
     setTimeout(() => {

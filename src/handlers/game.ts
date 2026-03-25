@@ -103,6 +103,7 @@ function handleCreateGame(ws: WebSocket, data: unknown): void {
     currentQuestion: 0,
     status: 'waiting',
     answers: [],
+    isResolving: false,
   };
 
   games.set(code, game);
