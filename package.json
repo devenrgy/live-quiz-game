@@ -5,7 +5,8 @@
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
-    "start": "tsc && node dist/index.js"
+    "start": "tsc && node dist/index.js",
+    "test:e2e": "tsc && node dist/test-e2e.js"
   },
   "dependencies": {
     "ws": "^8.18.0"
