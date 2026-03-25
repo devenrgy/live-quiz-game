@@ -112,6 +112,10 @@ export interface GameFinishedPayload {
   }[];
 }
 
+export interface GameCancelledPayload {
+  reason: string;
+}
+
 export interface WsMessage<T> {
   type: string;
   data: T;

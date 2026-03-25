@@ -5,6 +5,7 @@ import { handlePlay } from './handlers/play.js';
 import { WsMessage } from './types.js';
 import { players, playerGame, games, gameTimers } from './store.js';
 import { broadcast } from './utils/messages.js';
+import { GameCancelledPayload } from './types.js';
 
 export function startServer(): void {
   const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 8080;
@@ -61,9 +62,33 @@ export function startServer(): void {
           const game = games.get(gameId);
 
           if (game !== undefined) {
+            const isHost = game.hostId === disconnectedPlayerName;
+
             game.players = game.players.filter((p) => p.name !== disconnectedPlayerName);
 
-            if (game.players.length === 0) {
+            if (isHost) {
+              const timer = gameTimers.get(gameId);
+              if (timer !== undefined) {
+                clearTimeout(timer);
+                gameTimers.delete(gameId);
+              }
+
+              const remainingClients = game.players
+                .map((p) => {
+                  const storedPlayer = players.get(p.name);
+                  return storedPlayer?.ws;
+                })
+                .filter((c): c is WebSocket => c !== undefined);
+
+              if (remainingClients.length > 0) {
+                const cancelledData: GameCancelledPayload = {
+                  reason: 'Host disconnected',
+                };
+                broadcast(remainingClients, 'game_cancelled', cancelledData);
+              }
+
+              games.delete(gameId);
+            } else if (game.players.length === 0) {
               const timer = gameTimers.get(gameId);
               if (timer !== undefined) {
                 clearTimeout(timer);
