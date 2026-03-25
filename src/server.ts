@@ -11,7 +11,7 @@ export function startServer(): void {
   const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 8080;
   const wss = new WebSocketServer({ port });
 
-  console.log(`Server started on port ${port}`);
+  process.stdout.write(`Server started on port ${port}\n`);
 
   wss.on('connection', (ws) => {
     ws.on('message', (raw) => {

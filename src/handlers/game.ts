@@ -94,19 +94,28 @@ function handleCreateGame(ws: WebSocket, data: unknown): void {
   const code = generateCode();
   const gameId = crypto.randomUUID();
 
+  const hostPlayer = players.get(hostName);
+  if (hostPlayer === undefined) {
+    return;
+  }
+
   const game: Game = {
     id: gameId,
     code,
     hostId: hostName,
     questions: payload.questions,
-    players: [],
+    players: [{
+      name: hostPlayer.name,
+      index: hostPlayer.index,
+      score: hostPlayer.score,
+    }],
     currentQuestion: 0,
     status: 'waiting',
     answers: [],
     isResolving: false,
   };
 
-  games.set(code, game);
+  games.set(gameId, game);
   playerGame.set(hostName, gameId);
 
   const response: CreateGameResponsePayload = {
@@ -153,7 +162,13 @@ function handleJoinGame(ws: WebSocket, data: unknown): void {
     return;
   }
 
-  const game = games.get(payload.code);
+  let game: import('../types.js').Game | undefined;
+  for (const g of games.values()) {
+    if (g.code === payload.code) {
+      game = g;
+      break;
+    }
+  }
 
   if (game === undefined || game.status !== 'waiting') {
     const errorResponse: JoinGameResponsePayload = {

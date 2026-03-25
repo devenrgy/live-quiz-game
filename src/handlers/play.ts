@@ -8,8 +8,6 @@ import {
   AnswerAcceptedPayload,
   QuestionResultPayload,
   GameFinishedPayload,
-  Question,
-  Player,
 } from '../types.js';
 import { players, games, playerGame, gameTimers } from '../store.js';
 import { send, broadcast } from '../utils/messages.js';
@@ -42,14 +40,7 @@ function handleStartGame(ws: WebSocket, data: unknown): void {
     return;
   }
 
-  let game: Game | undefined;
-
-  for (const g of games.values()) {
-    if (g.id === payload.gameId) {
-      game = g;
-      break;
-    }
-  }
+  const game = games.get(payload.gameId);
 
   if (game === undefined || game.hostId !== hostName) {
     return;
@@ -83,18 +74,16 @@ function handleAnswer(ws: WebSocket, data: unknown): void {
 
   const payload = data as AnswerPayload | null;
 
-  if (!payload || typeof payload.gameId !== 'string' || typeof payload.questionIndex !== 'number' || typeof payload.answerIndex !== 'number') {
+  if (
+    !payload ||
+    typeof payload.gameId !== 'string' ||
+    typeof payload.questionIndex !== 'number' ||
+    typeof payload.answerIndex !== 'number'
+  ) {
     return;
   }
 
-  const gameId = payload.gameId;
-  const questionIndex = payload.questionIndex;
-  const answerIndex = payload.answerIndex;
-
-  const storedPlayer = players.get(playerName);
-  if (storedPlayer === undefined) {
-    return;
-  }
+  const { gameId, questionIndex, answerIndex } = payload;
 
   const actualGameId = playerGame.get(playerName);
   if (actualGameId === undefined || actualGameId !== gameId) {
@@ -127,10 +116,7 @@ function handleAnswer(ws: WebSocket, data: unknown): void {
 
   game.answers.push(answer);
 
-  const answerAccepted: AnswerAcceptedPayload = {
-    questionIndex,
-  };
-
+  const answerAccepted: AnswerAcceptedPayload = { questionIndex };
   send(ws, 'answer_accepted', answerAccepted);
 
   const allPlayersAnswered = game.answers.length === game.players.length;
@@ -155,10 +141,7 @@ export function sendQuestion(game: Game): void {
   };
 
   const allClients = game.players
-    .map((p) => {
-      const storedPlayer = players.get(p.name);
-      return storedPlayer?.ws;
-    })
+    .map((p) => players.get(p.name)?.ws)
     .filter((c): c is WebSocket => c !== undefined);
 
   broadcast(allClients, 'question', questionPayload);
@@ -192,7 +175,6 @@ export function resolveQuestion(game: Game): void {
 
   const questionIndex = game.currentQuestion;
   const correctIndex = question.correctIndex;
-
   const playerResults: QuestionResultPayload['playerResults'] = [];
 
   for (const player of game.players) {
@@ -226,10 +208,7 @@ export function resolveQuestion(game: Game): void {
   };
 
   const allClients = game.players
-    .map((p) => {
-      const storedPlayer = players.get(p.name);
-      return storedPlayer?.ws;
-    })
+    .map((p) => players.get(p.name)?.ws)
     .filter((c): c is WebSocket => c !== undefined);
 
   broadcast(allClients, 'question_result', resultPayload);
@@ -251,7 +230,6 @@ function finishGame(game: Game): void {
   game.status = 'finished';
 
   const sortedPlayers = [...game.players].sort((a, b) => b.score - a.score);
-
   const scoreboard: GameFinishedPayload['scoreboard'] = [];
 
   for (let i = 0; i < sortedPlayers.length; i += 1) {
@@ -268,22 +246,13 @@ function finishGame(game: Game): void {
       }
     }
 
-    scoreboard.push({
-      name: player.name,
-      score: player.score,
-      rank,
-    });
+    scoreboard.push({ name: player.name, score: player.score, rank });
   }
 
-  const finishedPayload: GameFinishedPayload = {
-    scoreboard,
-  };
+  const finishedPayload: GameFinishedPayload = { scoreboard };
 
   const allClients = game.players
-    .map((p) => {
-      const storedPlayer = players.get(p.name);
-      return storedPlayer?.ws;
-    })
+    .map((p) => players.get(p.name)?.ws)
     .filter((c): c is WebSocket => c !== undefined);
 
   broadcast(allClients, 'game_finished', finishedPayload);
