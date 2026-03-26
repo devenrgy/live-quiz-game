@@ -46,7 +46,7 @@ export function startServer(): void {
       res.end('Not Found');
     });
 
-    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Type', contentType + '; charset=utf-8');
     stream.pipe(res);
   });
 

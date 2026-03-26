@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="utf-8">
   <title>Live Quiz Game</title>
   <style>
     * { box-sizing: border-box; }
@@ -70,6 +71,7 @@
     const playerName = 'Player' + Math.floor(Math.random() * 1000);
     let gameId = '';
     let gameCode = '';
+    let questionIndex = 0;
 
     function addLog(text, className) {
       const line = document.createElement('div');
@@ -116,6 +118,10 @@
             gameId = msg.data.gameId;
             addLog('Saved gameId: ' + gameId, 'info');
           }
+          if (msg.type === 'question' && msg.data.questionNumber) {
+            questionIndex = msg.data.questionNumber - 1;
+            addLog('Current questionIndex: ' + questionIndex, 'info');
+          }
         } catch {}
       };
     }
@@ -160,7 +166,7 @@
     }
 
     function fillAnswer() {
-      input.value = JSON.stringify({ type: 'answer', data: { gameId, questionIndex: 0, answerIndex: 0 }, id: 0 });
+      input.value = JSON.stringify({ type: 'answer', data: { gameId, questionIndex, answerIndex: 0 }, id: 0 });
     }
 
     function fillPause() {
