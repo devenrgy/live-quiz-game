@@ -1,3 +1,6 @@
+import { createServer } from 'http';
+import { createReadStream } from 'fs';
+import { extname } from 'path';
 import { WebSocketServer, WebSocket } from 'ws';
 import { handleAuth } from './handlers/auth.js';
 import { handleGame } from './handlers/game.js';
@@ -7,11 +10,45 @@ import { players, playerGame, games, gameTimers } from './store.js';
 import { broadcast } from './utils/messages.js';
 import { GameCancelledPayload } from './types.js';
 
+const MIME_TYPES: Record<string, string> = {
+  '.html': 'text/html',
+  '.css': 'text/css',
+  '.js': 'application/javascript',
+  '.json': 'application/json',
+};
+
 export function startServer(): void {
   const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 8080;
-  const wss = new WebSocketServer({ port });
 
-  process.stdout.write(`Server started on port ${port}\n`);
+  const httpServer = createServer((req, res) => {
+    if (req.method !== 'GET') {
+      res.statusCode = 405;
+      res.end('Method Not Allowed');
+      return;
+    }
+
+    const urlPath = req.url === '/' ? '/index.html' : req.url;
+    const filePath = new URL(`.${urlPath}`, import.meta.url).pathname;
+
+    const ext = extname(filePath);
+    const contentType = MIME_TYPES[ext] ?? 'application/octet-stream';
+
+    const stream = createReadStream(filePath, { flags: 'r' });
+
+    stream.on('error', () => {
+      res.statusCode = 404;
+      res.end('Not Found');
+    });
+
+    res.setHeader('Content-Type', contentType);
+    stream.pipe(res);
+  });
+
+  const wss = new WebSocketServer({ server: httpServer });
+
+  httpServer.listen(port, () => {
+    process.stdout.write(`Server started on port ${port}\n`);
+  });
 
   wss.on('connection', (ws) => {
     ws.on('message', (raw) => {

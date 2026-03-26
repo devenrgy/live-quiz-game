@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Live Quiz Game</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: monospace; padding: 20px; max-width: 900px; margin: 0 auto; }
+    h1 { margin-bottom: 20px; }
+    .section { border: 1px solid #ccc; padding: 15px; margin-bottom: 15px; }
+    .section h2 { margin-top: 0; font-size: 16px; }
+    #log { height: 300px; overflow-y: auto; background: #f5f5f5; padding: 10px; border: 1px solid #ddd; }
+    .log-entry { margin: 3px 0; font-size: 12px; }
+    .sent { color: #0066cc; }
+    .received { color: #009900; }
+    .error { color: #cc0000; }
+    .info { color: #666; }
+    input, button { padding: 8px; font-family: monospace; font-size: 13px; }
+    input { width: 100%; margin-bottom: 10px; }
+    button { cursor: pointer; margin-right: 5px; margin-bottom: 5px; }
+    button:hover { background: #eee; }
+    .status { padding: 5px 10px; border-radius: 3px; font-size: 12px; }
+    .status.connected { background: #d4edda; color: #155724; }
+    .status.disconnected { background: #f8d7da; color: #721c24; }
+    .quick-actions { margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Live Quiz Game - WebSocket Client</h1>
+  
+  <div class="section">
+    <h2>Connection</h2>
+    <span id="connectionStatus" class="status disconnected">Disconnected</span>
+    <div style="margin-top: 10px;">
+      <button onclick="connect()">Connect</button>
+      <button onclick="disconnect()">Disconnect</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Quick Actions</h2>
+    <div class="quick-actions">
+      <button onclick="fillReg()">Register</button>
+      <button onclick="fillCreateGame()">Create Game</button>
+      <button onclick="fillJoinGame()">Join Game</button>
+      <button onclick="fillStartGame()">Start Game</button>
+      <button onclick="fillAnswer()">Answer</button>
+      <button onclick="fillPause()">Pause</button>
+      <button onclick="fillResume()">Resume</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Send Message</h2>
+    <input type="text" id="message" placeholder='{"type":"reg","data":{"name":"Test","password":"123"},"id":0}'>
+    <button onclick="send()">Send</button>
+    <button onclick="clearLog()">Clear Log</button>
+  </div>
+
+  <div class="section">
+    <h2>Log</h2>
+    <div id="log"></div>
+  </div>
+
+  <script>
+    let ws = null;
+    const log = document.getElementById('log');
+    const statusEl = document.getElementById('connectionStatus');
+    const input = document.getElementById('message');
+
+    const playerName = 'Player' + Math.floor(Math.random() * 1000);
+    let gameId = '';
+    let gameCode = '';
+
+    function addLog(text, className) {
+      const line = document.createElement('div');
+      line.className = 'log-entry ' + className;
+      const time = new Date().toLocaleTimeString();
+      line.textContent = '[' + time + '] ' + text;
+      log.appendChild(line);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function updateStatus(connected) {
+      if (connected) {
+        statusEl.textContent = 'Connected';
+        statusEl.className = 'status connected';
+      } else {
+        statusEl.textContent = 'Disconnected';
+        statusEl.className = 'status disconnected';
+      }
+    }
+
+    function connect() {
+      if (ws) ws.close();
+      const wsUrl = 'ws://' + window.location.host;
+      ws = new WebSocket(wsUrl);
+      ws.onopen = () => {
+        addLog('Connected to ' + wsUrl, 'info');
+        updateStatus(true);
+      };
+      ws.onclose = () => {
+        addLog('Disconnected', 'error');
+        updateStatus(false);
+      };
+      ws.onerror = (e) => addLog('Error: ' + e.type, 'error');
+      ws.onmessage = (e) => {
+        addLog('Received: ' + e.data, 'received');
+        try {
+          const msg = JSON.parse(e.data);
+          if (msg.type === 'create_game' && msg.data.code) {
+            gameCode = msg.data.code;
+            gameId = msg.data.gameId;
+            addLog('Saved gameId: ' + gameId + ', code: ' + gameCode, 'info');
+          }
+          if (msg.type === 'join_game' && msg.data.gameId) {
+            gameId = msg.data.gameId;
+            addLog('Saved gameId: ' + gameId, 'info');
+          }
+        } catch {}
+      };
+    }
+
+    function disconnect() {
+      if (ws) ws.close();
+    }
+
+    function send() {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(input.value);
+        addLog('Sent: ' + input.value, 'sent');
+      } else {
+        addLog('Not connected', 'error');
+      }
+    }
+
+    function clearLog() {
+      log.innerHTML = '';
+    }
+
+    function fillReg() {
+      input.value = JSON.stringify({ type: 'reg', data: { name: playerName, password: '123' }, id: 0 });
+    }
+
+    function fillCreateGame() {
+      const questions = [{
+        text: 'Столица Франции?',
+        options: ['Париж', 'Лондон', 'Берлин', 'Мадрид'],
+        correctIndex: 0,
+        timeLimitSec: 30
+      }];
+      input.value = JSON.stringify({ type: 'create_game', data: { questions }, id: 0 });
+    }
+
+    function fillJoinGame() {
+      input.value = JSON.stringify({ type: 'join_game', data: { code: 'ABC123' }, id: 0 });
+    }
+
+    function fillStartGame() {
+      input.value = JSON.stringify({ type: 'start_game', data: { gameId }, id: 0 });
+    }
+
+    function fillAnswer() {
+      input.value = JSON.stringify({ type: 'answer', data: { gameId, questionIndex: 0, answerIndex: 0 }, id: 0 });
+    }
+
+    function fillPause() {
+      input.value = JSON.stringify({ type: 'pause_game', data: { gameId }, id: 0 });
+    }
+
+    function fillResume() {
+      input.value = JSON.stringify({ type: 'resume_game', data: { gameId }, id: 0 });
+    }
+
+    input.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') send();
+    });
+  </script>
+</body>
+</html>
