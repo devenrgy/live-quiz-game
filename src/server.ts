@@ -1,6 +1,7 @@
 import { createServer } from 'http';
 import { createReadStream } from 'fs';
-import { extname } from 'path';
+import { extname, dirname, join } from 'path';
+import { fileURLToPath } from 'url';
 import { WebSocketServer, WebSocket } from 'ws';
 import { handleAuth } from './handlers/auth.js';
 import { handleGame } from './handlers/game.js';
@@ -9,6 +10,10 @@ import { WsMessage } from './types.js';
 import { players, playerGame, games, gameTimers } from './store.js';
 import { broadcast } from './utils/messages.js';
 import { GameCancelledPayload } from './types.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const rootDir = __dirname;
 
 const MIME_TYPES: Record<string, string> = {
   '.html': 'text/html',
@@ -27,8 +32,9 @@ export function startServer(): void {
       return;
     }
 
-    const urlPath = req.url === '/' ? '/index.html' : req.url;
-    const filePath = new URL(`.${urlPath}`, import.meta.url).pathname;
+    const urlPath = req.url ?? '/index.html';
+    const safePath = urlPath === '/' ? '/index.html' : urlPath;
+    const filePath = join(rootDir, 'public', safePath);
 
     const ext = extname(filePath);
     const contentType = MIME_TYPES[ext] ?? 'application/octet-stream';

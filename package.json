@@ -5,9 +5,10 @@
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
-    "start": "tsc && node dist/index.js",
-    "test:e2e": "tsc && node dist/test-e2e.js",
-    "bot": "tsc && ROOM_CODE=$ROOM_CODE node dist/bot.js"
+    "build": "tsc && cp -r public dist/public 2>/dev/null || true",
+    "start": "npm run build && node dist/index.js",
+    "test:e2e": "npm run build && node dist/test-e2e.js",
+    "bot": "npm run build && ROOM_CODE=$ROOM_CODE node dist/bot.js"
   },
   "dependencies": {
     "ws": "^8.18.0"
