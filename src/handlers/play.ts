@@ -8,6 +8,8 @@ import {
   AnswerAcceptedPayload,
   QuestionResultPayload,
   GameFinishedPayload,
+  PauseGamePayload,
+  ResumeGamePayload,
 } from '../types.js';
 import { players, games, playerGame, gameTimers } from '../store.js';
 import { send, broadcast } from '../utils/messages.js';
@@ -17,6 +19,10 @@ export function handlePlay(ws: WebSocket, type: string, data: unknown): void {
     handleStartGame(ws, data);
   } else if (type === 'answer') {
     handleAnswer(ws, data);
+  } else if (type === 'pause_game') {
+    handlePauseGame(ws, data);
+  } else if (type === 'resume_game') {
+    handleResumeGame(ws, data);
   }
 }
 
@@ -224,6 +230,115 @@ export function resolveQuestion(game: Game): void {
   } else {
     finishGame(game);
   }
+}
+
+function handlePauseGame(ws: WebSocket, data: unknown): void {
+  let hostName: string | undefined;
+
+  for (const [name, player] of players.entries()) {
+    if (player.ws === ws) {
+      hostName = name;
+      break;
+    }
+  }
+
+  if (hostName === undefined) {
+    return;
+  }
+
+  const payload = data as PauseGamePayload | null;
+
+  if (!payload || typeof payload.gameId !== 'string') {
+    return;
+  }
+
+  const game = games.get(payload.gameId);
+
+  if (game === undefined || game.hostId !== hostName) {
+    return;
+  }
+
+  if (game.status !== 'in_progress') {
+    return;
+  }
+
+  const timer = gameTimers.get(game.id);
+  if (timer !== undefined) {
+    clearTimeout(timer);
+    gameTimers.delete(game.id);
+  }
+
+  const question = game.questions[game.currentQuestion];
+  if (question === undefined || game.questionStartedAt === undefined) {
+    return;
+  }
+
+  const elapsedMs = Date.now() - game.questionStartedAt;
+  const totalMs = question.timeLimitSec * 1000;
+  const remainingMs = Math.max(0, totalMs - elapsedMs);
+
+  game.pausedAt = Date.now();
+  game.timeRemainingAtPause = remainingMs;
+  game.status = 'paused';
+
+  const allClients = game.players
+    .map((p) => players.get(p.name)?.ws)
+    .filter((c): c is WebSocket => c !== undefined);
+
+  broadcast(allClients, 'game_paused', {});
+}
+
+function handleResumeGame(ws: WebSocket, data: unknown): void {
+  let hostName: string | undefined;
+
+  for (const [name, player] of players.entries()) {
+    if (player.ws === ws) {
+      hostName = name;
+      break;
+    }
+  }
+
+  if (hostName === undefined) {
+    return;
+  }
+
+  const payload = data as ResumeGamePayload | null;
+
+  if (!payload || typeof payload.gameId !== 'string') {
+    return;
+  }
+
+  const game = games.get(payload.gameId);
+
+  if (game === undefined || game.hostId !== hostName) {
+    return;
+  }
+
+  if (game.status !== 'paused') {
+    return;
+  }
+
+  const timeRemaining = game.timeRemainingAtPause;
+  if (timeRemaining === undefined) {
+    return;
+  }
+
+  game.status = 'in_progress';
+  delete game.pausedAt;
+  delete game.timeRemainingAtPause;
+  game.questionStartedAt = Date.now();
+
+  const timer = setTimeout(() => {
+    resolveQuestion(game);
+  }, timeRemaining);
+
+  gameTimers.set(game.id, timer);
+
+  const allClients = game.players
+    .map((p) => players.get(p.name)?.ws)
+    .filter((c): c is WebSocket => c !== undefined);
+
+  broadcast(allClients, 'game_resumed', {});
 }
 
 function finishGame(game: Game): void {

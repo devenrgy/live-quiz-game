@@ -36,6 +36,8 @@ export function startServer(): void {
           break;
         case 'start_game':
         case 'answer':
+        case 'pause_game':
+        case 'resume_game':
           handlePlay(ws, message.type, message.data);
           break;
       }

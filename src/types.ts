@@ -1,4 +1,4 @@
-export type GameStatus = 'waiting' | 'in_progress' | 'finished';
+export type GameStatus = 'waiting' | 'in_progress' | 'finished' | 'paused';
 
 export interface Player {
   name: string;
@@ -24,6 +24,8 @@ export interface Game {
   questionStartedAt?: number;
   answers: PlayerAnswer[];
   isResolving: boolean;
+  pausedAt?: number;
+  timeRemainingAtPause?: number;
 }
 
 export interface PlayerAnswer {
@@ -114,6 +116,14 @@ export interface GameFinishedPayload {
 
 export interface GameCancelledPayload {
   reason: string;
+}
+
+export interface PauseGamePayload {
+  gameId: string;
+}
+
+export interface ResumeGamePayload {
+  gameId: string;
 }
 
 export interface WsMessage<T> {
