@@ -75,6 +75,8 @@ export function startServer(): void {
           break;
         case 'create_game':
         case 'join_game':
+        case 'export_questions':
+        case 'import_questions':
           handleGame(ws, message.type, message.data);
           break;
         case 'start_game':
