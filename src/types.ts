@@ -126,6 +126,25 @@ export interface ResumeGamePayload {
   gameId: string;
 }
 
+export interface ExportQuestionsPayload {
+  gameId: string;
+}
+
+export interface QuestionsExportedPayload {
+  schemaVersion: number;
+  questions: Question[];
+}
+
+export interface ImportQuestionsPayload {
+  gameId: string;
+  questions: Question[];
+}
+
+export interface QuestionsImportedPayload {
+  gameId: string;
+  totalQuestions: number;
+}
+
 export interface WsMessage<T> {
   type: string;
   data: T;

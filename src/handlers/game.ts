@@ -2,11 +2,15 @@ import { WebSocket } from 'ws';
 import {
   CreateGamePayload,
   CreateGameResponsePayload,
+  ExportQuestionsPayload,
   Game,
+  ImportQuestionsPayload,
   JoinGamePayload,
   JoinGameResponsePayload,
   PlayerJoinedPayload,
   Question,
+  QuestionsExportedPayload,
+  QuestionsImportedPayload,
   UpdatePlayersPayload,
 } from '../types.js';
 import { players, games, playerGame } from '../store.js';
@@ -58,6 +62,10 @@ export function handleGame(ws: WebSocket, type: string, data: unknown): void {
     handleCreateGame(ws, data);
   } else if (type === 'join_game') {
     handleJoinGame(ws, data);
+  } else if (type === 'export_questions') {
+    handleExportQuestions(ws, data);
+  } else if (type === 'import_questions') {
+    handleImportQuestions(ws, data);
   }
 }
 
@@ -223,4 +231,72 @@ function handleJoinGame(ws: WebSocket, data: unknown): void {
     players: updatedPlayers,
   };
   broadcast(allClients, 'update_players', updatePlayersData);
+}
+
+function handleExportQuestions(ws: WebSocket, data: unknown): void {
+  let hostName: string | undefined;
+
+  for (const [name, player] of players.entries()) {
+    if (player.ws === ws) {
+      hostName = name;
+      break;
+    }
+  }
+
+  if (hostName === undefined) {
+    return;
+  }
+
+  const payload = data as ExportQuestionsPayload | null;
+
+  if (!payload || typeof payload.gameId !== 'string') {
+    return;
+  }
+
+  const game = games.get(payload.gameId);
+
+  if (game === undefined || game.hostId !== hostName) {
+    return;
+  }
+
+  const response: QuestionsExportedPayload = {
+    schemaVersion: 1,
+    questions: game.questions,
+  };
+  send(ws, 'questions_exported', response);
+}
+
+function handleImportQuestions(ws: WebSocket, data: unknown): void {
+  let hostName: string | undefined;
+
+  for (const [name, player] of players.entries()) {
+    if (player.ws === ws) {
+      hostName = name;
+      break;
+    }
+  }
+
+  if (hostName === undefined) {
+    return;
+  }
+
+  const payload = data as ImportQuestionsPayload | null;
+
+  if (!payload || typeof payload.gameId !== 'string' || !isValidQuestionsArray(payload.questions)) {
+    return;
+  }
+
+  const game = games.get(payload.gameId);
+
+  if (game === undefined || game.hostId !== hostName || game.status !== 'waiting') {
+    return;
+  }
+
+  game.questions = payload.questions;
+
+  const response: QuestionsImportedPayload = {
+    gameId: game.id,
+    totalQuestions: game.questions.length,
+  };
+  send(ws, 'questions_imported', response);
 }
