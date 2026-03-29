@@ -154,7 +154,7 @@ export function startServer(): void {
                 score: p.score,
               }));
 
-              broadcast(remainingClients, 'update_players', { players: updatedPlayers });
+              broadcast(remainingClients, 'update_players', updatedPlayers);
             }
           }
         }

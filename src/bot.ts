@@ -13,6 +13,9 @@ const botPassword = 'bot-password';
 
 const ws = new WebSocket(wsUrl);
 
+let gameId = '';
+let currentQuestionIndex = 0;
+
 ws.on('open', () => {
   const regMessage = JSON.stringify({
     type: 'reg',
@@ -51,8 +54,13 @@ ws.on('message', (raw) => {
       id: 0,
     });
     ws.send(joinMessage);
+  } else if (type === 'game_joined') {
+    const joinedData = data as { gameId: string } | null;
+    if (joinedData !== null && joinedData.gameId) {
+      gameId = joinedData.gameId;
+    }
   } else if (type === 'question') {
-    const questionData = data as { timeLimitSec: number; options: [string, string, string, string] } | null;
+    const questionData = data as { timeLimitSec: number; options: [string, string, string, string]; questionNumber: number } | null;
     if (questionData === null) {
       return;
     }
@@ -65,15 +73,22 @@ ws.on('message', (raw) => {
       const answerMessage = JSON.stringify({
         type: 'answer',
         data: {
-          gameId: '',
-          questionIndex: 0,
+          gameId,
+          questionIndex: currentQuestionIndex,
           answerIndex: randomAnswer,
         },
         id: 0,
       });
       ws.send(answerMessage);
     }, delayMs);
+  } else if (type === 'question_result') {
+    const resultData = data as { questionIndex: number } | null;
+    if (resultData !== null && typeof resultData.questionIndex === 'number') {
+      currentQuestionIndex = resultData.questionIndex + 1;
+    }
   } else if (type === 'game_finished') {
+    ws.close();
+  } else if (type === 'game_cancelled') {
     ws.close();
   }
 });

@@ -55,11 +55,16 @@ export interface CreateGameResponsePayload {
   code: string;
 }
 
+export interface GameCreatedPayload {
+  gameId: string;
+  code: string;
+}
+
 export interface JoinGamePayload {
   code: string;
 }
 
-export interface JoinGameResponsePayload {
+export interface GameJoinedPayload {
   gameId: string;
 }
 
@@ -68,9 +73,7 @@ export interface PlayerJoinedPayload {
   playerCount: number;
 }
 
-export interface UpdatePlayersPayload {
-  players: Player[];
-}
+export interface UpdatePlayersPayload extends Array<Player> {}
 
 export interface StartGamePayload {
   gameId: string;
@@ -137,6 +140,7 @@ export interface QuestionsExportedPayload {
 
 export interface ImportQuestionsPayload {
   gameId: string;
+  schemaVersion: number;
   questions: Question[];
 }
 

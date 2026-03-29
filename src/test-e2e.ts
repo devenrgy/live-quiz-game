@@ -87,7 +87,7 @@ async function runTest(): Promise<void> {
     },
   ];
   hostWs.send(createMessage('create_game', { questions }));
-  const gameCreated = await hostCollector.waitFor('create_game');
+  const gameCreated = await hostCollector.waitFor('game_created');
   const gameData = gameCreated.data as { gameId: string; code: string };
   console.log('Game created:', JSON.stringify(gameData));
 
@@ -100,7 +100,7 @@ async function runTest(): Promise<void> {
   const hostPlayerJoined1 = hostCollector.waitFor('player_joined');
   const hostUpdatePlayers1 = hostCollector.waitFor('update_players');
   player1Ws.send(createMessage('join_game', { code: gameData.code }));
-  const player1Join = await player1Collector.waitFor('join_game');
+  const player1Join = await player1Collector.waitFor('game_joined');
   console.log('Player1 joined:', JSON.stringify(player1Join.data));
   await hostPlayerJoined1;
   await hostUpdatePlayers1;
@@ -115,7 +115,7 @@ async function runTest(): Promise<void> {
   const hostPlayerJoined2 = hostCollector.waitFor('player_joined');
   const hostUpdatePlayers2 = hostCollector.waitFor('update_players');
   player2Ws.send(createMessage('join_game', { code: gameData.code }));
-  const player2Join = await player2Collector.waitFor('join_game');
+  const player2Join = await player2Collector.waitFor('game_joined');
   console.log('Player2 joined:', JSON.stringify(player2Join.data));
   await hostPlayerJoined2;
   await hostUpdatePlayers2;

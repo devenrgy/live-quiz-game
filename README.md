@@ -71,7 +71,7 @@ All messages are JSON strings with the following structure:
 
 **Response:**
 ```json
-{ "type": "create_game", "data": { "gameId": "uuid", "code": "ABC123" }, "id": 0 }
+{ "type": "game_created", "data": { "gameId": "uuid", "code": "ABC123" }, "id": 0 }
 ```
 
 ---
@@ -85,13 +85,13 @@ All messages are JSON strings with the following structure:
 
 **Response:**
 ```json
-{ "type": "join_game", "data": { "gameId": "uuid" }, "id": 0 }
+{ "type": "game_joined", "data": { "gameId": "uuid" }, "id": 0 }
 ```
 
 **Broadcast to all players:**
 ```json
 { "type": "player_joined", "data": { "playerName": "Player2", "playerCount": 2 }, "id": 0 }
-{ "type": "update_players", "data": { "players": [{ "name": "Player1", "index": "uuid1", "score": 0 }, { "name": "Player2", "index": "uuid2", "score": 0 }] }, "id": 0 }
+{ "type": "update_players", "data": [{ "name": "Player1", "index": "uuid1", "score": 0 }, { "name": "Player2", "index": "uuid2", "score": 0 }], "id": 0 }
 ```
 
 ---

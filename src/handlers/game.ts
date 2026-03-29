@@ -1,17 +1,17 @@
 import { WebSocket } from 'ws';
 import {
   CreateGamePayload,
-  CreateGameResponsePayload,
+  GameCreatedPayload,
   ExportQuestionsPayload,
   Game,
   ImportQuestionsPayload,
   JoinGamePayload,
-  JoinGameResponsePayload,
+  GameJoinedPayload,
   PlayerJoinedPayload,
   Question,
   QuestionsExportedPayload,
   QuestionsImportedPayload,
-  UpdatePlayersPayload,
+  Player,
 } from '../types.js';
 import { players, games, playerGame } from '../store.js';
 import { generateCode } from '../utils/codes.js';
@@ -80,22 +80,22 @@ function handleCreateGame(ws: WebSocket, data: unknown): void {
   }
 
   if (hostName === undefined) {
-    const errorResponse: CreateGameResponsePayload = {
+    const errorResponse: GameCreatedPayload = {
       gameId: '',
       code: '',
     };
-    send(ws, 'create_game', errorResponse);
+    send(ws, 'game_created', errorResponse);
     return;
   }
 
   const payload = data as CreateGamePayload | null;
 
   if (!payload || !isValidQuestionsArray(payload.questions)) {
-    const errorResponse: CreateGameResponsePayload = {
+    const errorResponse: GameCreatedPayload = {
       gameId: '',
       code: '',
     };
-    send(ws, 'create_game', errorResponse);
+    send(ws, 'game_created', errorResponse);
     return;
   }
 
@@ -126,11 +126,11 @@ function handleCreateGame(ws: WebSocket, data: unknown): void {
   games.set(gameId, game);
   playerGame.set(hostName, gameId);
 
-  const response: CreateGameResponsePayload = {
+  const response: GameCreatedPayload = {
     gameId,
     code,
   };
-  send(ws, 'create_game', response);
+  send(ws, 'game_created', response);
 }
 
 function handleJoinGame(ws: WebSocket, data: unknown): void {
@@ -144,29 +144,29 @@ function handleJoinGame(ws: WebSocket, data: unknown): void {
   }
 
   if (playerName === undefined) {
-    const errorResponse: JoinGameResponsePayload = {
+    const errorResponse: GameJoinedPayload = {
       gameId: '',
     };
-    send(ws, 'join_game', errorResponse);
+    send(ws, 'game_joined', errorResponse);
     return;
   }
 
   const existingGameId = playerGame.get(playerName);
   if (existingGameId !== undefined) {
-    const errorResponse: JoinGameResponsePayload = {
+    const errorResponse: GameJoinedPayload = {
       gameId: '',
     };
-    send(ws, 'join_game', errorResponse);
+    send(ws, 'game_joined', errorResponse);
     return;
   }
 
   const payload = data as JoinGamePayload | null;
 
   if (!payload || typeof payload.code !== 'string') {
-    const errorResponse: JoinGameResponsePayload = {
+    const errorResponse: GameJoinedPayload = {
       gameId: '',
     };
-    send(ws, 'join_game', errorResponse);
+    send(ws, 'game_joined', errorResponse);
     return;
   }
 
@@ -179,19 +179,19 @@ function handleJoinGame(ws: WebSocket, data: unknown): void {
   }
 
   if (game === undefined || game.status !== 'waiting') {
-    const errorResponse: JoinGameResponsePayload = {
+    const errorResponse: GameJoinedPayload = {
       gameId: '',
     };
-    send(ws, 'join_game', errorResponse);
+    send(ws, 'game_joined', errorResponse);
     return;
   }
 
   const player = players.get(playerName);
   if (player === undefined) {
-    const errorResponse: JoinGameResponsePayload = {
+    const errorResponse: GameJoinedPayload = {
       gameId: '',
     };
-    send(ws, 'join_game', errorResponse);
+    send(ws, 'game_joined', errorResponse);
     return;
   }
 
@@ -202,10 +202,10 @@ function handleJoinGame(ws: WebSocket, data: unknown): void {
   });
   playerGame.set(playerName, game.id);
 
-  const joinResponse: JoinGameResponsePayload = {
+  const joinResponse: GameJoinedPayload = {
     gameId: game.id,
   };
-  send(ws, 'join_game', joinResponse);
+  send(ws, 'game_joined', joinResponse);
 
   const playerJoinedData: PlayerJoinedPayload = {
     playerName: player.name,
@@ -227,10 +227,7 @@ function handleJoinGame(ws: WebSocket, data: unknown): void {
     score: p.score,
   }));
 
-  const updatePlayersData: UpdatePlayersPayload = {
-    players: updatedPlayers,
-  };
-  broadcast(allClients, 'update_players', updatePlayersData);
+  broadcast(allClients, 'update_players', updatedPlayers);
 }
 
 function handleExportQuestions(ws: WebSocket, data: unknown): void {
@@ -282,7 +279,7 @@ function handleImportQuestions(ws: WebSocket, data: unknown): void {
 
   const payload = data as ImportQuestionsPayload | null;
 
-  if (!payload || typeof payload.gameId !== 'string' || !isValidQuestionsArray(payload.questions)) {
+  if (!payload || typeof payload.gameId !== 'string' || typeof payload.schemaVersion !== 'number' || payload.schemaVersion !== 1 || !isValidQuestionsArray(payload.questions)) {
     return;
   }
 

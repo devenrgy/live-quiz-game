@@ -109,12 +109,12 @@
         addLog('Received: ' + e.data, 'received');
         try {
           const msg = JSON.parse(e.data);
-          if (msg.type === 'create_game' && msg.data.code) {
+          if (msg.type === 'game_created' && msg.data.code) {
             gameCode = msg.data.code;
             gameId = msg.data.gameId;
             addLog('Saved gameId: ' + gameId + ', code: ' + gameCode, 'info');
           }
-          if (msg.type === 'join_game' && msg.data.gameId) {
+          if (msg.type === 'game_joined' && msg.data.gameId) {
             gameId = msg.data.gameId;
             addLog('Saved gameId: ' + gameId, 'info');
           }
