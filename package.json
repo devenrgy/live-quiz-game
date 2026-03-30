@@ -1,0 +1,21 @@
+{
+  "name": "live-quiz-game",
+  "version": "1.0.0",
+  "description": "Live Quiz Game WebSocket Backend",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc && cp -r public dist/public 2>/dev/null || true",
+    "start": "npm run build && node dist/index.js",
+    "test:e2e": "npm run build && node dist/test-e2e.js",
+    "bot": "npm run build && ROOM_CODE=$ROOM_CODE node dist/bot.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "@types/ws": "^8.5.13",
+    "@types/node": "^22.10.2"
+  }
+}
